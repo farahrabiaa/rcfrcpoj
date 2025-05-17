@@ -5,7 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 import { getOrderStatusHistory } from '../../lib/ordersApi';
 import CustomerRatingForm from '../Rating/CustomerRatingForm';
 
-export default function OrderProcessing({ order, onClose, onStatusUpdate, isModal = true }) {
+export default function OrderProcessing({ order, onClose, onStatusUpdate, isModal = false }) {
   const { user } = useAuthStore();
   const [drivers, setDrivers] = useState([]);
   const [selectedDriver, setSelectedDriver] = useState(null);
@@ -268,8 +268,7 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate, isModa
 
 
   return (
-    <div className={`bg-white rounded-lg p-6 ${isModal ? 'fixed inset-0 z-50 m-auto max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl' : ''}`}>
-      {isModal && <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onClose}></div>}
+    <div className="bg-white rounded-lg p-6 relative z-50 max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold">إجراءات الطلب #{order.id.substring(0, 8)}</h2>
         <button
