@@ -20,6 +20,7 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate, isModa
   const [statusNote, setStatusNote] = useState('');
   const [selectedStatus, setSelectedStatus] = useState(order.status);
   const [waitingListError, setWaitingListError] = useState(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const statusOptions = [
     { value: 'pending', label: 'معلق' },
@@ -197,6 +198,8 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate, isModa
   const handleUpdateStatus = async (newStatus, note = '') => {
 
     try {
+      setUpdatingStatus(true);
+      
       const { error: historyError } = await supabase
         .from('order_status_history')
         .insert([{
@@ -226,6 +229,19 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate, isModa
       if (newStatus === 'completed') {
         setShowCustomerRating(true);
       }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error('حدث خطأ أثناء تحديث الحالة');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  // Function to handle status update button click
+  const handleStatusUpdateClick = async () => {
+    try {
+      setUpdatingStatus(true);
+      await handleUpdateStatus(selectedStatus);
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('حدث خطأ أثناء تحديث الحالة');
@@ -448,10 +464,13 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate, isModa
                 />
               </div>
               <button
-                onClick={() => handleUpdateStatus(selectedStatus)}
-                className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors"
+                onClick={handleStatusUpdateClick}
+                disabled={updatingStatus}
+                className={`w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors ${
+                  updatingStatus ? 'opacity-70 cursor-not-allowed' : ''
+                }`}
               >
-                تحديث الحالة
+                {updatingStatus ? 'جاري التحديث...' : 'تحديث الحالة'}
               </button>
             </div>
           </div>
