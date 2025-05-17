@@ -432,7 +432,7 @@ export default function ShippingMethods() {
                       {getDeliveryTypeText(method.delivery_type)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {method.zone ? method.zone : 'جميع المناطق'}
+                      {method.zone?.name || 'جميع المناطق'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       ₪{method.cost}
@@ -742,6 +742,7 @@ export default function ShippingMethods() {
                             fixed_price: parseFloat(e.target.value)
                           }
                         }
+                      
                       })}
                       className="w-full border rounded-md px-3 py-2"
                       min="0"
