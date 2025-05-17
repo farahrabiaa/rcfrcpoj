@@ -31,10 +31,6 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
   ];
 
   useEffect(() => {
-    if (!user) {
-      console.warn('User not authenticated');
-      return;
-    }
     loadDrivers();
     loadStatusHistory();
   }, [user]);
@@ -96,10 +92,6 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
   };
 
   const addToWaitingList = async () => {
-    if (!user) {
-      toast.error('يجب تسجيل الدخول أولاً');
-      return;
-    }
 
     try {
       setAddingToWaitingList(true);
@@ -133,10 +125,6 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
   };
 
   const handleAssignDriver = async () => {
-    if (!user) {
-      toast.error('يجب تسجيل الدخول أولاً');
-      return;
-    }
 
     if (assignmentType === 'waiting-list') {
       await addToWaitingList();
@@ -196,10 +184,6 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
   };
 
   const handleUpdateStatus = async (newStatus, note = '') => {
-    if (!user) {
-      toast.error('يجب تسجيل الدخول أولاً');
-      return;
-    }
 
     try {
       const { error: historyError } = await supabase
@@ -271,15 +255,6 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
     setShowCustomerRating(false);
   };
 
-  if (!user) {
-    return (
-      <div className="bg-white rounded-lg p-6">
-        <div className="text-center text-red-600">
-          يجب تسجيل الدخول للوصول إلى هذه الصفحة
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-white rounded-lg p-6">

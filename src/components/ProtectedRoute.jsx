@@ -16,7 +16,7 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
   // Check if user is authenticated
   if (!isAuthenticated()) {
     // Redirect to login page
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace state={{ from: window.location.pathname }} />;
   }
 
   // If roles are specified, check if user has the required role
@@ -27,7 +27,7 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
     }
     
     // Fallback
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace state={{ from: window.location.pathname }} />;
   }
 
   return children;

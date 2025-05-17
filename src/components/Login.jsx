@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -13,6 +13,8 @@ export default function Login() {
   const { login, isAuthenticated, user } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from || '/admin-dashboard';
 
   // Check for saved credentials on component mount
   useEffect(() => {
@@ -35,11 +37,11 @@ export default function Login() {
     // Check if user exists and has a role before accessing user.role
     if (user) {
       if (user.role === 'admin') {
-        return <Navigate to="/admin-dashboard" />;
+        return <Navigate to={from} />;
       }
     }
     // Default redirect if user exists but role is unknown
-    return <Navigate to="/admin-dashboard" />;
+    return <Navigate to={from} />;
   }
 
   const handleSubmit = async (e) => {
@@ -55,10 +57,10 @@ export default function Login() {
       
       // Redirect based on role
       if (user.role === 'admin') {
-        navigate('/admin-dashboard');
+        navigate(from);
       } else {
         // Default redirect
-        navigate('/admin-dashboard');
+        navigate(from);
       }
     } catch (error) {
       console.error('Error logging in:', error);
