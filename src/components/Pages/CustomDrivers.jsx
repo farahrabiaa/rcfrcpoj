@@ -216,135 +216,55 @@ export default function CustomDrivers() {
       setLoading(true);
       
       // التحقق من البيانات المطلوبة
-      if (!formData.username || (!editingDriver && !formData.password) || !formData.name || !formData.phone) {
+      if (!formData.username || !formData.password || !formData.name || !formData.phone) {
         toast.error('الرجاء تعبئة جميع الحقول المطلوبة');
         setLoading(false);
         return;
       }
       
-      if (editingDriver) {
-        // تحديث بيانات السائق الموجود
-        
-        // التحقق من البريد الإلكتروني إذا تم تغييره
-        if (formData.email && formData.email !== editingDriver.email) {
-          const emailExists = await checkEmailExists(formData.email, editingDriver.user_id);
-          if (emailExists) {
-            toast.error('البريد الإلكتروني مستخدم بالفعل');
-            setLoading(false);
-            return;
-          }
+      // إنشاء مستخدم مخصص جديد للسائق
+      const { data: userId, error: userError } = await supabase.rpc(
+        'add_custom_user',
+        {
+          p_username: formData.username,
+          p_password: formData.password,
+          p_name: formData.name,
+          p_email: formData.email || null,
+          p_phone: formData.phone,
+          p_role: 'driver'
         }
-        
-        // 1. تحديث بيانات المستخدم المخصص
-        const { error: userError } = await supabase
-          .from('custom_users')
-          .update({
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', editingDriver.user_id);
-        
-        if (userError) throw userError;
-        
-        // إذا تم تغيير كلمة المرور، قم بتحديثها
-        if (formData.password) {
-          const { data: hashData, error: hashError } = await supabase.rpc(
-            'hash_password',
-            { password: formData.password }
-          );
-          
-          if (hashError) throw hashError;
-          
-          const { error: passwordError } = await supabase
-            .from('custom_users')
-            .update({ password_hash: hashData })
-            .eq('id', editingDriver.user_id);
-          
-          if (passwordError) throw passwordError;
-        }
-        
-        // 2. تحديث بيانات السائق
-        const { error: driverError } = await supabase
-          .from('drivers')
-          .update({
-            name: formData.name,
-            phone: formData.phone,
-            email: formData.email,
-            status: formData.status,
-            commission_rate: formData.commission_rate,
-            vehicle_type: formData.vehicle_type,
-            vehicle_model: formData.vehicle_model,
-            vehicle_year: formData.vehicle_year,
-            vehicle_plate: formData.vehicle_plate,
-            working_areas: formData.working_areas,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', editingDriver.id);
-        
-        if (driverError) throw driverError;
-        
-        toast.success('تم تحديث بيانات السائق بنجاح');
-      } else {
-        // إضافة سائق جديد
-        
-        // التحقق من اسم المستخدم
-        const usernameExists = await checkUsernameExists(formData.username);
-        if (usernameExists) {
-          toast.error('اسم المستخدم مستخدم بالفعل');
-          setLoading(false);
-          return;
-        }
-        
-        // التحقق من البريد الإلكتروني
-        if (formData.email) {
-          const emailExists = await checkEmailExists(formData.email);
-          if (emailExists) {
-            toast.error('البريد الإلكتروني مستخدم بالفعل');
-            setLoading(false);
-            return;
-          }
-        }
-        
-        // 1. إنشاء مستخدم مخصص جديد
-        const userId = await addCustomUser({
-          username: formData.username,
-          password: formData.password,
+      );
+      
+      if (userError) throw userError;
+      
+      // إنشاء سائق جديد
+      const { data: driverData, error: driverError } = await supabase
+        .from('drivers')
+        .insert([{
+          user_id: userId,
           name: formData.name,
-          email: formData.email,
           phone: formData.phone,
-          role: 'driver'
-        });
-        
-        if (!userId) {
-          throw new Error('فشل في إنشاء المستخدم المخصص');
-        }
-        
-        // 2. إنشاء سائق جديد
-        const { data: driverData, error: driverError } = await supabase
-          .from('drivers')
-          .insert([{
-            user_id: userId,
-            name: formData.name,
-            phone: formData.phone,
-            email: formData.email,
-            status: formData.status,
-            rating: formData.rating,
-            rating_count: formData.rating_count,
-            commission_rate: formData.commission_rate,
-            vehicle_type: formData.vehicle_type,
-            vehicle_model: formData.vehicle_model,
-            vehicle_year: formData.vehicle_year,
-            vehicle_plate: formData.vehicle_plate,
-            working_areas: formData.working_areas
-          }])
-          .select();
-        
-        if (driverError) throw driverError;
-        
-        toast.success('تم إضافة السائق بنجاح');
-      }
+          email: formData.email,
+          status: formData.status,
+          rating: formData.rating,
+          rating_count: formData.rating_count,
+          commission_rate: formData.commission_rate,
+          vehicle_type: formData.vehicle_type,
+          vehicle_model: formData.vehicle_model,
+          vehicle_year: formData.vehicle_year,
+          vehicle_plate: formData.vehicle_plate,
+          working_areas: formData.working_areas
+        }])
+        .select();
+      
+      if (driverError) throw driverError;
+      
+      // إضافة السائق إلى المستخدمين المصادقين
+      await supabase.rpc('register_driver_in_auth', {
+        p_driver_id: driverData[0].id
+      });
+      
+      toast.success('تم إضافة السائق بنجاح');
       
       // إعادة تحميل بيانات السائقين
       fetchDrivers();
@@ -845,44 +765,4 @@ export default function CustomDrivers() {
                       <span>{area}</span>
                     </label>
                   ))}
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    setEditingDriver(null);
-                  }}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                  disabled={loading}
-                >
-                  {loading ? 'جاري الحفظ...' : (editingDriver ? 'تحديث' : 'إضافة')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </Dialog>
-      
-      <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg">
-        <h3 className="text-lg font-semibold text-blue-800 mb-4">ملاحظات هامة</h3>
-        <ul className="list-disc list-inside space-y-2 text-blue-700">
-          <li>يتم إنشاء حساب مستخدم مخصص لكل سائق جديد.</li>
-          <li>يمكن للسائق تسجيل الدخول باستخدام اسم المستخدم وكلمة المرور.</li>
-          <li>يتم تعيين دور المستخدم تلقائيًا كـ "سائق".</li>
-          <li>يمكن للسائق تحديث موقعه وحالته من خلال التطبيق.</li>
-          <li>يتم احتساب العمولة بناءً على نسبة العمولة المحددة.</li>
-          <li>يمكن تحديد مناطق العمل للسائق لتسهيل عملية تعيين السائقين للطلبات.</li>
-        </ul>
-      </div>
-    </div>
-  );
-}
+                </div
