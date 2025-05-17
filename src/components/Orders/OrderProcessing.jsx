@@ -191,6 +191,8 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate, isModa
       case 'delivering': return 'تم تحويل الطلب للتوصيل';
       case 'waiting-for-driver': return 'تم إضافة الطلب لقائمة انتظار السائقين';
       case 'completed': return 'تم إكمال الطلب';
+      case 'accepted': return 'تم قبول الطلب';
+      case 'rejected': return 'تم رفض الطلب';
       default: return `تم تغيير الحالة إلى ${getStatusText(status)}`;
     }
   };

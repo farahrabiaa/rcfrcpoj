@@ -120,7 +120,7 @@ export const updateOrderStatus = async (orderId, status, note = '') => {
   try {
     // Try to use the new function first
     const { data, error } = await supabase.rpc(
-      'update_order_status',
+      'update_order_status_v2',
       { 
         p_order_id: orderId,
         p_status: status,
@@ -237,7 +237,7 @@ export const getOrderStatusHistory = async (orderId) => {
   try {
     // Try to use the new function first
     const { data, error } = await supabase.rpc(
-      'get_order_status_history_v2',
+      'get_order_status_history_with_users',
       { p_order_id: orderId }
     );
     
