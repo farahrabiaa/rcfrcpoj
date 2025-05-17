@@ -523,6 +523,7 @@ export default function OrderProcessing({ order, user, onClose, onStatusUpdate, 
             )}
           </div>
         </>
+      )}
     </div>
   );
 }
