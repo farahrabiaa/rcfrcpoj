@@ -315,9 +315,7 @@ export default function OrderProcessing({ order, user, onClose, onStatusUpdate, 
           <strong className="font-bold">تنبيه!</strong>
           <span className="block sm:inline"> يرجى تسجيل الدخول للمتابعة.</span>
         </div>
-      ) : (
-
-        showCustomerRating ? (
+      ) : showCustomerRating ? (
         <CustomerRatingForm 
           orderId={order.id}
           driverId={selectedDriver?.id || order.driver_id}
@@ -525,8 +523,7 @@ export default function OrderProcessing({ order, user, onClose, onStatusUpdate, 
             )}
           </div>
         </>
-      )}
-      )}
+      )
     </div>
   );
 }
