@@ -31,9 +31,13 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
   ];
 
   useEffect(() => {
+    if (!user) {
+      console.warn('User not authenticated');
+      return;
+    }
     loadDrivers();
     loadStatusHistory();
-  }, []);
+  }, [user]);
 
   const loadDrivers = async () => {
     try {
@@ -67,7 +71,6 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
           created_at: record.created_at
         })));
       } else {
-        // إذا لم يكن هناك سجل، استخدم الحالة الحالية
         setStatusHistory([
           { 
             id: 'initial', 
@@ -79,7 +82,6 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
       }
     } catch (error) {
       console.error('Error loading status history:', error);
-      // استخدم الحالة الحالية كسجل افتراضي
       setStatusHistory([
         { 
           id: 'initial', 
@@ -94,6 +96,11 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
   };
 
   const addToWaitingList = async () => {
+    if (!user) {
+      toast.error('يجب تسجيل الدخول أولاً');
+      return;
+    }
+
     try {
       setAddingToWaitingList(true);
 
@@ -125,26 +132,12 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
     }
   };
 
-  const getStatusText = (status) => {
-    const option = statusOptions.find(opt => opt.value === status);
-    return option ? option.label : status;
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'accepted': return 'bg-blue-100 text-blue-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      case 'processing': return 'bg-yellow-100 text-yellow-800';
-      case 'waiting-for-driver': return 'bg-orange-100 text-orange-800';
-      case 'delivering': return 'bg-purple-100 text-purple-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   const handleAssignDriver = async () => {
+    if (!user) {
+      toast.error('يجب تسجيل الدخول أولاً');
+      return;
+    }
+
     if (assignmentType === 'waiting-list') {
       await addToWaitingList();
       return;
@@ -166,14 +159,13 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
       
       if (error) throw error;
       
-      // إضافة سجل لتغيير الحالة
       const { error: historyError } = await supabase
         .from('order_status_history')
         .insert([{
           order_id: order.id,
           status: 'delivering',
           note: `تم تعيين السائق ${selectedDriver.name}`,
-          created_by: user?.id
+          created_by: user.id
         }]);
       
       if (historyError) {
@@ -181,7 +173,9 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
       }
       
       setOrderStatus('delivering');
-      onStatusUpdate(order.id, 'delivering');
+      if (typeof onStatusUpdate === 'function') {
+        onStatusUpdate(order.id, 'delivering');
+      }
       await loadStatusHistory();
       
       toast.success(`تم تعيين السائق ${selectedDriver.name} للطلب`);
@@ -202,6 +196,11 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
   };
 
   const handleUpdateStatus = async (newStatus, note = '') => {
+    if (!user) {
+      toast.error('يجب تسجيل الدخول أولاً');
+      return;
+    }
+
     try {
       const { error: historyError } = await supabase
         .from('order_status_history')
@@ -209,7 +208,7 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
           order_id: order.id,
           status: newStatus,
           note: note || statusNote || getDefaultStatusNote(newStatus),
-          created_by: user?.id
+          created_by: user.id
         }]);
 
       if (historyError) throw historyError;
@@ -222,18 +221,38 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
       if (error) throw error;
 
       setOrderStatus(newStatus);
-      onStatusUpdate(order.id, newStatus);
+      if (typeof onStatusUpdate === 'function') {
+        onStatusUpdate(order.id, newStatus);
+      }
       await loadStatusHistory();
       setStatusNote('');
       toast.success('تم تحديث حالة الطلب');
       
-      // Show customer rating form when driver completes the order
       if (newStatus === 'completed') {
         setShowCustomerRating(true);
       }
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('حدث خطأ أثناء تحديث الحالة');
+    }
+  };
+
+  const getStatusText = (status) => {
+    const option = statusOptions.find(opt => opt.value === status);
+    return option ? option.label : status;
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'accepted': return 'bg-blue-100 text-blue-800';
+      case 'rejected': return 'bg-red-100 text-red-800';
+      case 'processing': return 'bg-yellow-100 text-yellow-800';
+      case 'waiting-for-driver': return 'bg-orange-100 text-orange-800';
+      case 'delivering': return 'bg-purple-100 text-purple-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -251,6 +270,16 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
     toast.success('تم تقييم الزبون بنجاح');
     setShowCustomerRating(false);
   };
+
+  if (!user) {
+    return (
+      <div className="bg-white rounded-lg p-6">
+        <div className="text-center text-red-600">
+          يجب تسجيل الدخول للوصول إلى هذه الصفحة
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg p-6">
