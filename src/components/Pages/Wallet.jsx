@@ -88,11 +88,7 @@ export default function Wallet() {
       try {
         const { data: transactionsData, error: transactionsError } = await supabase
           .from('wallet_transactions')
-          .select(`
-            *,
-            wallet:wallet_id(user_id),
-            order:order_id(*)
-          `)
+          .select('*')
           .order('created_at', { ascending: false })
           .limit(10);
         
@@ -100,29 +96,7 @@ export default function Wallet() {
         setTransactions(transactionsData || []);
       } catch (error) {
         console.error('Error fetching transactions:', error);
-        // استخدم بيانات تجريبية
-        setTransactions([
-          {
-            id: 1,
-            order_id: '123',
-            amount: 500,
-            type: 'debit',
-            payment_type: 'withdrawal',
-            status: 'completed',
-            description: 'سحب رصيد',
-            created_at: new Date().toISOString()
-          },
-          {
-            id: 2,
-            order_id: '124',
-            amount: 150,
-            type: 'credit',
-            payment_type: 'cash',
-            status: 'completed',
-            description: 'مبلغ طلب + توصيل',
-            created_at: new Date(Date.now() - 86400000).toISOString()
-          }
-        ]);
+        setTransactions([]);
       }
       
     } catch (error) {
