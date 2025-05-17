@@ -118,43 +118,20 @@ export const getOrder = async (orderId) => {
  */
 export const updateOrderStatus = async (orderId, status, note = '') => {
   try {
-    // Try to use the new function first
+    // Use the simplified function
     const { data, error } = await supabase.rpc(
-      'update_order_status_v2',
+      'update_order_status_simple',
       { 
         p_order_id: orderId,
         p_status: status,
         p_note: note
       }
     );
-        
-    if (error) {
-      console.error('Error using RPC function:', error);
-      
-      // Fallback to direct update
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .update({ status })
-        .eq('id', orderId)
-        .select();
-      
-      if (orderError) throw orderError;
-      
-      // Add status history record
-      const { error: historyError } = await supabase
-        .from('order_status_history')
-        .insert([{
-          order_id: orderId,
-          status,
-          note,
-          created_at: new Date().toISOString()
-        }]);
-      
-      if (historyError) {
-        console.error('Error adding status history:', historyError);
-      }
-      
-      return orderData[0];
+    
+    if (error) throw error;
+    
+    if (!data) {
+      throw new Error('فشل في تحديث حالة الطلب');
     }
 
     // Get updated order

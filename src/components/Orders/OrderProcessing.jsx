@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { supabase } from '../../lib/supabase';
-import { getOrderStatusHistory } from '../../lib/ordersApi';
+import { getOrderStatusHistory, updateOrderStatus } from '../../lib/ordersApi';
 import CustomerRatingForm from '../Rating/CustomerRatingForm';
 
-export default function OrderProcessing({ order, user, onClose, onStatusUpdate, isModal = false }) {
+export default function OrderProcessing({ order, onClose, onStatusUpdate, isModal = false }) {
+  const [user, setUser] = useState(null);
   const [drivers, setDrivers] = useState([]);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [preparationTime, setPreparationTime] = useState('15');
@@ -31,9 +32,18 @@ export default function OrderProcessing({ order, user, onClose, onStatusUpdate, 
   ];
 
   useEffect(() => {
+    // Get current user
+    const getCurrentUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user);
+      }
+    };
+    
+    getCurrentUser();
     loadDrivers();
     loadStatusHistory();
-  }, [user]);
+  }, []);
 
   const loadDrivers = async () => {
     try {
@@ -211,24 +221,18 @@ export default function OrderProcessing({ order, user, onClose, onStatusUpdate, 
 
     try {
       setUpdatingStatus(true);
-      
-      const { error: historyError } = await supabase
-        .from('order_status_history')
-        .insert([{
-          order_id: order.id,
-          status: newStatus,
-          note: note || statusNote || getDefaultStatusNote(newStatus),
-          created_by: user.id
-        }]);
 
-      if (historyError) throw historyError;
+      // Use the RPC function to update status
+      const { data, error } = await supabase.rpc(
+        'update_order_status_simple',
+        { 
+          p_order_id: order.id,
+          p_status: newStatus,
+          p_note: note || statusNote || getDefaultStatusNote(newStatus)
+        }
+      );
       
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: newStatus })
-        .eq('id', order.id);
-        
-      if (error) throw error;
+      if (error || !data) throw new Error(error?.message || 'فشل في تحديث حالة الطلب');
 
       setOrderStatus(newStatus);
       if (typeof onStatusUpdate === 'function') {
