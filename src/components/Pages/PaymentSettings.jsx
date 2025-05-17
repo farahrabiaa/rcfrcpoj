@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { getPaymentSettings, updatePaymentSettings } from '../../lib/walletApi';
+import { supabase } from '../../lib/supabase';
 
 export default function PaymentSettings() {
   const [loading, setLoading] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState([]);
   const [settings, setSettings] = useState({
     deliveryCommission: 15,
     autoDeductFromDriver: true,
@@ -67,6 +69,27 @@ export default function PaymentSettings() {
     }
   });
 
+  // تحميل طرق الدفع من قاعدة البيانات
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('payment_methods')
+          .select('*')
+          .eq('status', 'active')
+          .order('id');
+        
+        if (error) throw error;
+        setPaymentMethods(data || []);
+      } catch (error) {
+        console.error('Error fetching payment methods:', error);
+        toast.error('فشل في تحميل طرق الدفع');
+      }
+    };
+    
+    fetchPaymentMethods();
+  }, []);
+
   // تحميل الإعدادات من قاعدة البيانات
   useEffect(() => {
     const loadSettings = async () => {
@@ -88,7 +111,7 @@ export default function PaymentSettings() {
     loadSettings();
   }, []);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     try {
       setLoading(true);
       
@@ -97,7 +120,7 @@ export default function PaymentSettings() {
         ...settings
       };
       
-      updatePaymentSettings(paymentSettings);
+      await updatePaymentSettings(paymentSettings);
       
       toast.success('تم حفظ إعدادات المحفظة بنجاح');
     } catch (error) {
@@ -108,22 +131,55 @@ export default function PaymentSettings() {
     }
   };
 
-  const PaymentMethodCard = ({ type, method }) => (
+  // تحديث طريقة دفع
+  const updatePaymentMethod = async (id, updatedData) => {
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('payment_methods')
+        .update(updatedData)
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast.success('تم تحديث طريقة الدفع بنجاح');
+      
+      // تحديث الحالة المحلية
+      setPaymentMethods(methods => 
+        methods.map(method => method.id === id ? { ...method, ...updatedData } : method)
+      );
+    } catch (error) {
+      console.error('Error updating payment method:', error);
+      toast.error('فشل في تحديث طريقة الدفع');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const PaymentMethodCard = ({ method }) => (
     <div className="bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md p-6 border border-gray-100">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-full ${type === 'wallet' ? 'bg-blue-100 text-blue-600' : type === 'electronic' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
-            {method.icon}
+          <div className={`p-2 rounded-full ${
+            method.type === 'wallet' ? 'bg-purple-100 text-purple-600' : 
+            method.type === 'electronic' ? 'bg-blue-100 text-blue-600' : 
+            'bg-green-100 text-green-600'
+          }`}>
+            {method.icon || (
+              method.type === 'wallet' ? '👛' : 
+              method.type === 'electronic' ? '💳' : 
+              '💰'
+            )}
           </div>
-          <h3 className="text-xl font-bold">{method.name}</h3>
+          <h3 className="text-xl font-bold">{method.name || 'طريقة دفع'}</h3>
         </div>
         <label className="relative inline-flex items-center cursor-pointer">
           <input
             type="checkbox"
-            checked={method.enabled}
-            onChange={(e) => setSettings({
-              ...settings,
-              [type]: { ...method, enabled: e.target.checked }
+            checked={method.status === 'active'}
+            onChange={(e) => updatePaymentMethod(method.id, {
+              status: e.target.checked ? 'active' : 'inactive'
             })}
             className="sr-only peer"
           />
@@ -133,7 +189,7 @@ export default function PaymentSettings() {
 
       <div className="space-y-6">
         <div className="bg-white p-4 rounded-lg border border-gray-100">
-          <p className="text-gray-600">{method.description}</p>
+          <p className="text-gray-600">{method.description || 'لا يوجد وصف'}</p>
         </div>
 
         <div>
@@ -142,27 +198,31 @@ export default function PaymentSettings() {
             خطوات العمل
           </h4>
           <div className="space-y-2">
-            {method.steps.map((step, index) => (
+            {(method.settings?.steps || []).map((step, index) => (
               <div key={index} className="flex gap-2">
                 <input
                   type="text"
                   value={step}
                   onChange={(e) => {
-                    const newSteps = [...method.steps];
+                    const newSteps = [...(method.settings?.steps || [])];
                     newSteps[index] = e.target.value;
-                    setSettings({
-                      ...settings,
-                      [type]: { ...method, steps: newSteps }
+                    updatePaymentMethod(method.id, {
+                      settings: {
+                        ...method.settings,
+                        steps: newSteps
+                      }
                     });
                   }}
                   className="flex-1 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
                 <button
                   onClick={() => {
-                    const newSteps = method.steps.filter((_, i) => i !== index);
-                    setSettings({
-                      ...settings,
-                      [type]: { ...method, steps: newSteps }
+                    const newSteps = (method.settings?.steps || []).filter((_, i) => i !== index);
+                    updatePaymentMethod(method.id, {
+                      settings: {
+                        ...method.settings,
+                        steps: newSteps
+                      }
                     });
                   }}
                   className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-colors"
@@ -173,10 +233,12 @@ export default function PaymentSettings() {
             ))}
             <button
               onClick={() => {
-                const newSteps = [...method.steps, ''];
-                setSettings({
-                  ...settings,
-                  [type]: { ...method, steps: newSteps }
+                const newSteps = [...(method.settings?.steps || []), ''];
+                updatePaymentMethod(method.id, {
+                  settings: {
+                    ...method.settings,
+                    steps: newSteps
+                  }
                 });
               }}
               className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors"
@@ -187,62 +249,13 @@ export default function PaymentSettings() {
           </div>
         </div>
 
-        {method.balanceNotes && (
-          <div>
-            <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-              <span className="text-blue-600">💰</span>
-              حسابات الأرصدة
-            </h4>
-            <div className="space-y-2">
-              {method.balanceNotes.map((note, index) => (
-                <div key={index} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={note}
-                    onChange={(e) => {
-                      const newNotes = [...method.balanceNotes];
-                      newNotes[index] = e.target.value;
-                      setSettings({
-                        ...settings,
-                        [type]: { ...method, balanceNotes: newNotes }
-                      });
-                    }}
-                    className="flex-1 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  />
-                  <button
-                    onClick={() => {
-                      const newNotes = method.balanceNotes.filter((_, i) => i !== index);
-                      setSettings({
-                        ...settings,
-                        [type]: { ...method, balanceNotes: newNotes }
-                      });
-                    }}
-                    className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-colors"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() => {
-                  const newNotes = [...method.balanceNotes, ''];
-                  setSettings({
-                    ...settings,
-                    [type]: { ...method, balanceNotes: newNotes }
-                  });
-                }}
-                className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors"
-              >
-                <span>+</span>
-                إضافة ملاحظة
-              </button>
-            </div>
-          </div>
-        )}
-
-        {method.note && (
-          <div className={`p-4 rounded-lg ${type === 'wallet' ? 'bg-blue-50 text-blue-800' : 'bg-green-50 text-green-800'}`}>
-            <p>{method.note}</p>
+        {method.settings?.note && (
+          <div className={`p-4 rounded-lg ${
+            method.type === 'wallet' ? 'bg-purple-50 text-purple-800' : 
+            method.type === 'electronic' ? 'bg-blue-50 text-blue-800' : 
+            'bg-green-50 text-green-800'
+          }`}>
+            <p>{method.settings.note}</p>
           </div>
         )}
       </div>
@@ -335,10 +348,17 @@ export default function PaymentSettings() {
       </div>
 
       {/* Payment Methods */}
-      <div className="grid grid-cols-1 gap-8">
-        <PaymentMethodCard type="cash" method={settings.cash} />
-        <PaymentMethodCard type="electronic" method={settings.electronic} />
-        <PaymentMethodCard type="wallet" method={settings.wallet} />
+      <div className="grid grid-cols-1 gap-8 mt-8">
+        <h2 className="text-2xl font-bold mb-4">طرق الدفع المتاحة</h2>
+        {paymentMethods.length === 0 ? (
+          <div className="bg-white p-8 rounded-lg shadow-md text-center">
+            <p className="text-gray-500">لا توجد طرق دفع متاحة</p>
+          </div>
+        ) : (
+          paymentMethods.map(method => (
+            <PaymentMethodCard key={method.id} method={method} />
+          ))
+        )}
       </div>
     </div>
   );

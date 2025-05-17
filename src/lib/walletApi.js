@@ -1,6 +1,26 @@
 import { supabase } from './supabase';
 
 /**
+ * الحصول على طرق الدفع المتاحة
+ * @returns {Promise<Array>} - قائمة طرق الدفع
+ */
+export const getPaymentMethods = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('payment_methods')
+      .select('*')
+      .eq('status', 'active')
+      .order('id');
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching payment methods:', error);
+    throw error;
+  }
+};
+
+/**
  * الحصول على رصيد المحفظة لمستخدم معين
  * @param {string} userId - معرف المستخدم
  * @returns {Promise<Object>} - بيانات الرصيد
@@ -267,6 +287,7 @@ export default {
   getFinancialStats,
   getPaymentSettings,
   updatePaymentSettings,
+  getPaymentMethods,
   getVendorWallet,
   getDriverWallet
 };
