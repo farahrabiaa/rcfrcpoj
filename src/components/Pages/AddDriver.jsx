@@ -8,6 +8,7 @@ export default function AddDriver() {
     name: '',
     phone: '',
     email: '',
+    password: '',
     status: 'offline',
     commission_rate: 15,
     vehicle_type: 'motorcycle',
@@ -107,6 +108,19 @@ export default function AddDriver() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="w-full border rounded-md px-3 py-2"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  كلمة المرور <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full border rounded-md px-3 py-2"
+                  required
                 />
               </div>
               
