@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { supabase } from '../../lib/supabase';
 import OrderProcessing from '../Orders/OrderProcessing';
-import { Dialog, Transition } from '@headlessui/react';
+import { Dialog } from '@headlessui/react';
+import { Transition } from '@headlessui/react';
 import { Fragment } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 
 const FIELD_LABELS = {
   customer_name: 'اسم العميل',
@@ -39,6 +41,7 @@ export default function Orders() {
   const [error, setError] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showProcessingModal, setShowProcessingModal] = useState(false);
+  const { user } = useAuth();
 
   const getGoogleMapsLink = (address) => {
     if (!address) return null;
@@ -286,6 +289,7 @@ export default function Orders() {
                 <div className="inline-block w-full max-w-3xl my-8 text-right align-middle transition-all transform">
                   <OrderProcessing 
                     order={selectedOrder} 
+                    user={user}
                     onClose={() => {
                       setShowProcessingModal(false);
                       fetchOrders();
