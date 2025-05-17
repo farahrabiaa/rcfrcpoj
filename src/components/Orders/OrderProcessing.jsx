@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { supabase } from '../../lib/supabase';
-import { useAuthStore } from '../../store/authStore';
 import { getOrderStatusHistory } from '../../lib/ordersApi';
 import CustomerRatingForm from '../Rating/CustomerRatingForm';
 
-export default function OrderProcessing({ order, onClose, onStatusUpdate, isModal = false }) {
-  const { user } = useAuthStore();
+export default function OrderProcessing({ order, user, onClose, onStatusUpdate, isModal = false }) {
   const [drivers, setDrivers] = useState([]);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [preparationTime, setPreparationTime] = useState('15');
@@ -312,14 +310,14 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate, isModa
         </button>
       </div>
 
-      {!user && (
+      {!user ? (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
           <strong className="font-bold">تنبيه!</strong>
           <span className="block sm:inline"> يرجى تسجيل الدخول للمتابعة.</span>
         </div>
-      )}
+      ) : (
 
-      {showCustomerRating ? (
+        showCustomerRating ? (
         <CustomerRatingForm 
           orderId={order.id}
           driverId={selectedDriver?.id || order.driver_id}
@@ -527,6 +525,7 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate, isModa
             )}
           </div>
         </>
+      )}
       )}
     </div>
   );
