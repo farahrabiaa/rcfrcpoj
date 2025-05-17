@@ -70,20 +70,20 @@ export const getWalletTransactions = async (walletId, options = {}) => {
  */
 export const getVendorWallets = async () => {
   try {
-    const { data, error } = await supabase.rpc('get_all_vendor_wallets');
+    // Direct query instead of RPC
+    const { data, error } = await supabase
+      .from('vendor_wallets')
+      .select(`
+        *,
+        vendor:vendor_id (
+          id,
+          store_name,
+          status,
+          user_id
+        )
+      `);
     
-    if (error) {
-      console.error('Error using RPC function:', error);
-      
-      // Fallback to direct query
-      const { data: vendorData, error: vendorError } = await supabase
-        .from('vendor_wallets')
-        .select('*');
-      
-      if (vendorError) throw vendorError;
-      return vendorData || [];
-    }
-    
+    if (error) throw error;
     return data || [];
   } catch (error) {
     console.error('Error fetching vendor wallets:', error);
@@ -97,20 +97,19 @@ export const getVendorWallets = async () => {
  */
 export const getDriverWallets = async () => {
   try {
-    const { data, error } = await supabase.rpc('get_all_driver_wallets');
+    const { data, error } = await supabase
+      .from('driver_wallets')
+      .select(`
+        *,
+        driver:driver_id (
+          id,
+          name,
+          status,
+          user_id
+        )
+      `);
     
-    if (error) {
-      console.error('Error using RPC function:', error);
-      
-      // Fallback to direct query
-      const { data: driverData, error: driverError } = await supabase
-        .from('driver_wallets')
-        .select('*');
-      
-      if (driverError) throw driverError;
-      return driverData || [];
-    }
-    
+    if (error) throw error;
     return data || [];
   } catch (error) {
     console.error('Error fetching driver wallets:', error);
@@ -250,7 +249,19 @@ export const updatePaymentSettings = async (settings) => {
  */
 export const getVendorWallet = async (vendorId) => {
   try {
-    const { data, error } = await supabase.rpc('get_vendor_wallet', { p_vendor_id: vendorId });
+    const { data, error } = await supabase
+      .from('vendor_wallets')
+      .select(`
+        *,
+        vendor:vendor_id (
+          id,
+          store_name,
+          status,
+          user_id
+        )
+      `)
+      .eq('vendor_id', vendorId)
+      .single();
     
     if (error) throw error;
     return data;
@@ -267,7 +278,19 @@ export const getVendorWallet = async (vendorId) => {
  */
 export const getDriverWallet = async (driverId) => {
   try {
-    const { data, error } = await supabase.rpc('get_driver_wallet', { p_driver_id: driverId });
+    const { data, error } = await supabase
+      .from('driver_wallets')
+      .select(`
+        *,
+        driver:driver_id (
+          id,
+          name,
+          status,
+          user_id
+        )
+      `)
+      .eq('driver_id', driverId)
+      .single();
     
     if (error) throw error;
     return data;
