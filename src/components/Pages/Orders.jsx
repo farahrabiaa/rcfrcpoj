@@ -57,7 +57,7 @@ export default function Orders() {
 
       // Fetch orders with customer and vendor information
       const { data, error: supabaseError } = await supabase
-        .from('orders') // Changed from 'ord' to 'orders' to match the correct table name
+        .from('orders')
         .select(`
           id,
           total,
