@@ -168,7 +168,7 @@ export const updateDriverStatus = async (id, status) => {
 export const createDriver = async (driverData) => {
   try {
     // إنشاء مستخدم مخصص جديد
-    const { data: userData, error: userError } = await supabase.rpc(
+    const { data: userId, error: userError } = await supabase.rpc(
       'add_custom_user',
       {
         p_username: driverData.username,
@@ -186,7 +186,7 @@ export const createDriver = async (driverData) => {
     const { data: driverData2, error: driverError } = await supabase
       .from('drivers')
       .insert([{
-        user_id: userData,
+        user_id: userId,
         name: driverData.name,
         phone: driverData.phone,
         email: driverData.email,
@@ -201,6 +201,16 @@ export const createDriver = async (driverData) => {
       .select();
     
     if (driverError) throw driverError;
+    
+    // إضافة السائق إلى المستخدمين المصادقين
+    const { error: authError } = await supabase.rpc('register_driver_in_auth', {
+      p_driver_id: driverData2[0].id
+    });
+    
+    if (authError) {
+      console.error('Error registering driver in auth system:', authError);
+      // نستمر حتى لو فشلت هذه الخطوة
+    }
     
     return driverData2[0];
   } catch (error) {
