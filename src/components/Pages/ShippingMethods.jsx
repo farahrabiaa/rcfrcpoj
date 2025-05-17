@@ -458,7 +458,9 @@ export default function ShippingMethods() {
                       )}
                       {method.delivery_type === 'zones' && method.settings && method.settings.zones && (
                         <div className="text-sm">
-                          {method.settings.zones.map((zone, index) => (
+                          {Array.isArray(method.settings.zones) ? method.settings.zones.map((zone, index) => (
+                            <div key={index}>{zone.name}: ₪{zone.price}</div>
+                          )) : method.settings.zones?.zones?.map((zone, index) => (
                             <div key={index}>{zone.name}: ₪{zone.price}</div>
                           ))}
                         </div>
