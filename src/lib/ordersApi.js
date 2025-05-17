@@ -118,16 +118,55 @@ export const getOrder = async (orderId) => {
  */
 export const updateOrderStatus = async (orderId, status, note = '') => {
   try {
-    // تحديث حالة الطلب
-    const { data, error } = await supabase
-      .from('orders')
-      .update({ status })
-      .eq('id', orderId)
-      .select();
+    // Try to use the new function first
+    const { data, error } = await supabase.rpc(
+      'update_order_status',
+      { 
+        p_order_id: orderId,
+        p_status: status,
+        p_note: note
+      }
+    );
         
-    if (error) throw error;
+    if (error) {
+      console.error('Error using RPC function:', error);
+      
+      // Fallback to direct update
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', orderId)
+        .select();
+      
+      if (orderError) throw orderError;
+      
+      // Add status history record
+      const { error: historyError } = await supabase
+        .from('order_status_history')
+        .insert([{
+          order_id: orderId,
+          status,
+          note,
+          created_at: new Date().toISOString()
+        }]);
+      
+      if (historyError) {
+        console.error('Error adding status history:', historyError);
+      }
+      
+      return orderData[0];
+    }
 
-    return data[0];
+    // Get updated order
+    const { data: orderData, error: orderError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single();
+    
+    if (orderError) throw orderError;
+    
+    return orderData;
   } catch (error) {
     console.error('Error updating order status:', error);
     throw error;
@@ -196,16 +235,29 @@ export const addOrderToWaitingList = async (orderId, vendorId) => {
  */
 export const getOrderStatusHistory = async (orderId) => {
   try {
-    const { data, error } = await supabase
-      .from('order_status_history')
-      .select(`
-        *,
-        user:created_by(*)
-      `)
-      .eq('order_id', orderId)
-      .order('created_at', { ascending: true });
+    // Try to use the new function first
+    const { data, error } = await supabase.rpc(
+      'get_order_status_history_v2',
+      { p_order_id: orderId }
+    );
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error using RPC function:', error);
+      
+      // Fallback to direct query
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('order_status_history')
+        .select(`
+          *,
+          user:created_by(*)
+        `)
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: true });
+      
+      if (fallbackError) throw fallbackError;
+      return fallbackData || [];
+    }
+    
     return data;
   } catch (error) {
     console.error('Error fetching order status history:', error);
