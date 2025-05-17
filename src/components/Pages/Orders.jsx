@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { supabase } from '../../lib/supabase';
 import OrderProcessing from '../Orders/OrderProcessing';
+import { Dialog } from '@headlessui/react';
 
 const FIELD_LABELS = {
   customer_name: 'اسم العميل',
@@ -38,6 +39,7 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showProcessingModal, setShowProcessingModal] = useState(false);
 
+  // Function to create Google Maps link from address
   // دالة لإنشاء رابط خرائط Google من العنوان
   const getGoogleMapsLink = (address) => {
     if (!address) return null;
@@ -216,13 +218,25 @@ export default function Orders() {
       )}
 
       {showProcessingModal && selectedOrder && (
-        <OrderProcessing 
-          order={selectedOrder} 
+        <Dialog
+          open={showProcessingModal}
           onClose={() => {
             setShowProcessingModal(false);
             fetchOrders();
-          }} 
-        />
+          }}
+          className="fixed inset-0 z-50 overflow-y-auto"
+        >
+          <div className="flex items-center justify-center min-h-screen">
+            <OrderProcessing 
+              order={selectedOrder} 
+              onClose={() => {
+                setShowProcessingModal(false);
+                fetchOrders();
+              }}
+              isModal={true}
+            />
+          </div>
+        </Dialog>
       )}
     </div>
   );
