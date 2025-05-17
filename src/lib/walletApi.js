@@ -144,6 +144,32 @@ export const chargeVendorWallet = async (vendorId, amount, description = 'شحن
 };
 
 /**
+ * شحن رصيد محفظة بائع مباشرة
+ * @param {string} vendorId - معرف البائع
+ * @param {number} amount - المبلغ المراد شحنه
+ * @param {string} description - وصف المعاملة
+ * @returns {Promise<Object>} - بيانات المعاملة
+ */
+export const chargeVendorWalletDirect = async (vendorId, amount, description = 'شحن رصيد مباشر') => {
+  try {
+    const { data, error } = await supabase.rpc(
+      'charge_vendor_wallet_direct',
+      {
+        p_vendor_id: vendorId,
+        p_amount: amount,
+        p_description: description
+      }
+    );
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error charging vendor wallet directly:', error);
+    throw error;
+  }
+};
+
+/**
  * شحن رصيد محفظة سائق
  * @param {string} driverId - معرف السائق
  * @param {number} amount - المبلغ المراد شحنه
@@ -165,6 +191,32 @@ export const chargeDriverWallet = async (driverId, amount, description = 'شحن
     return data;
   } catch (error) {
     console.error('Error charging driver wallet:', error);
+    throw error;
+  }
+};
+
+/**
+ * شحن رصيد محفظة سائق مباشرة
+ * @param {string} driverId - معرف السائق
+ * @param {number} amount - المبلغ المراد شحنه
+ * @param {string} description - وصف المعاملة
+ * @returns {Promise<Object>} - بيانات المعاملة
+ */
+export const chargeDriverWalletDirect = async (driverId, amount, description = 'شحن رصيد مباشر') => {
+  try {
+    const { data, error } = await supabase.rpc(
+      'charge_driver_wallet_direct',
+      {
+        p_driver_id: driverId,
+        p_amount: amount,
+        p_description: description
+      }
+    );
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error charging driver wallet directly:', error);
     throw error;
   }
 };
@@ -306,7 +358,9 @@ export default {
   getVendorWallets,
   getDriverWallets,
   chargeVendorWallet,
+  chargeVendorWalletDirect,
   chargeDriverWallet,
+  chargeDriverWalletDirect,
   getFinancialStats,
   getPaymentSettings,
   updatePaymentSettings,
