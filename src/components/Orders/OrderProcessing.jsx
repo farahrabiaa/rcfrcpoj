@@ -19,6 +19,7 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
   const [addingToWaitingList, setAddingToWaitingList] = useState(false);
   const [statusNote, setStatusNote] = useState('');
   const [selectedStatus, setSelectedStatus] = useState(order.status);
+  const [waitingListError, setWaitingListError] = useState(null);
 
   const statusOptions = [
     { value: 'pending', label: 'معلق' },
@@ -95,6 +96,7 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
 
     try {
       setAddingToWaitingList(true);
+      setWaitingListError(null);
 
       const { data: vendorData, error: vendorError } = await supabase
         .from('vendors')
@@ -102,7 +104,11 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
         .eq('store_name', order.vendor?.store_name)
         .single();
 
-      if (vendorError) throw vendorError;
+      if (vendorError) {
+        console.error('Error fetching vendor:', vendorError);
+        setWaitingListError('فشل في العثور على البائع');
+        throw vendorError;
+      }
 
       const { error } = await supabase
         .from('driver_waiting_list')
@@ -112,13 +118,18 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
           status: 'pending'
         }]);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error adding to waiting list:', error);
+        setWaitingListError('فشل في إضافة الطلب لقائمة الانتظار');
+        throw error;
+      }
 
       await handleUpdateStatus('waiting-for-driver', 'تم إضافة الطلب لقائمة انتظار السائقين');
       toast.success('تم إضافة الطلب لقائمة انتظار السائقين');
     } catch (error) {
       console.error('Error adding to waiting list:', error);
       toast.error('حدث خطأ أثناء إضافة الطلب لقائمة الانتظار');
+      setWaitingListError('حدث خطأ أثناء إضافة الطلب لقائمة الانتظار');
     } finally {
       setAddingToWaitingList(false);
     }
@@ -366,6 +377,9 @@ export default function OrderProcessing({ order, onClose, onStatusUpdate }) {
                         ? 'إضافة للقائمة'
                         : 'تعيين السائق'}
                 </button>
+                {waitingListError && (
+                  <p className="mt-2 text-sm text-red-600">{waitingListError}</p>
+                )}
               </div>
             </div>
           </div>
